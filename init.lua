@@ -630,6 +630,7 @@ require('lazy').setup({
         'lua-language-server',
         'stylua',
         'typescript-language-server',
+        'jdtls',
       })
 
       require('mason-tool-installer').setup { ensure_installed = ensure_installed }
@@ -883,7 +884,7 @@ require('lazy').setup({
   { -- Highlight, edit, and navigate code
     'nvim-treesitter/nvim-treesitter',
     config = function()
-      local filetypes = { 'bash', 'c', 'diff', 'html', 'javascript', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'rust', 'tsx', 'typescript', 'vim', 'vimdoc', 'vhdl' }
+      local filetypes = { 'bash', 'c', 'diff', 'html', 'java', 'javascript', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'rust', 'tsx', 'typescript', 'vim', 'vimdoc', 'vhdl' }
       require('nvim-treesitter').install(filetypes)
       vim.api.nvim_create_autocmd('FileType', {
         pattern = filetypes,
@@ -907,6 +908,26 @@ require('lazy').setup({
   require 'kickstart.plugins.autopairs',
   require 'kickstart.plugins.neo-tree',
   -- require 'kickstart.plugins.gitsigns', -- adds gitsigns recommend keymaps
+
+  -- Java LSP via nvim-jdtls.
+  -- jdtls requires per-buffer attach (not just vim.lsp.enable), so we wire it
+  -- up here with a FileType autocmd that runs jdtls.start_or_attach for each Java buffer.
+  -- jdtls binary is installed via Mason (see ensure_installed above).
+  {
+    'mfussenegger/nvim-jdtls',
+    ft = 'java',
+    config = function()
+      vim.api.nvim_create_autocmd('FileType', {
+        pattern = 'java',
+        callback = function()
+          require('jdtls').start_or_attach {
+            cmd = { 'jdtls' },
+            root_dir = vim.fs.dirname(vim.fs.find({ 'gradlew', 'mvnw', 'pom.xml', 'build.gradle', '.git' }, { upward = true })[1]),
+          }
+        end,
+      })
+    end,
+  },
 
   -- NOTE: The import below can automatically add your own plugins, configuration, etc from `lua/custom/plugins/*.lua`
   --    This is the easiest way to modularize your config.
