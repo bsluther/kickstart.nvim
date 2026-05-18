@@ -360,7 +360,7 @@ require('lazy').setup({
 
         -- `cond` is a condition used to determine whether this plugin should be
         -- installed and loaded.
-        cond = function() return vim.fn.executable 'make' == 1 end,
+        cond = function() return vim.fn.executable 'make' == 1 and vim.fn.has 'win32' == 0 end,
       },
       { 'nvim-telescope/telescope-ui-select.nvim' },
 
