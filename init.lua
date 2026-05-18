@@ -159,6 +159,9 @@ vim.o.cursorline = true
 -- Minimal number of screen lines to keep above and below the cursor.
 vim.o.scrolloff = 10
 
+-- Add a border to all floating windows (hover docs, diagnostics, signature help, etc.)
+vim.o.winborder = 'rounded'
+
 -- if performing an operation that would fail due to unsaved changes in the buffer (like `:q`),
 -- instead raise a dialog asking if you wish to save the current file(s)
 -- See `:help 'confirm'`
@@ -188,6 +191,15 @@ vim.diagnostic.config {
 }
 
 vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
+
+vim.keymap.set('n', '<A-j>', ':m .+1<CR>==', { desc = 'Move line down' })
+vim.keymap.set('n', '<A-k>', ':m .-2<CR>==', { desc = 'Move line up' })
+
+vim.keymap.set('n', '<leader>tc', function()
+  vim.g.blink_cmp_enabled = vim.g.blink_cmp_enabled == false
+  vim.notify('Completion ' .. (vim.g.blink_cmp_enabled == false and 'off' or 'on'))
+end, { desc = '[T]oggle [C]ompletion' })
+
 
 -- Exit terminal mode in the builtin terminal with a shortcut that is a bit easier
 -- for people to discover. Otherwise, you normally need to press <C-\><C-n>, which
@@ -596,7 +608,8 @@ require('lazy').setup({
         -- clangd = {},
         -- gopls = {},
         -- pyright = {},
-        -- rust_analyzer = {},
+        -- rust_analyzer is excluded here because it's managed by rustup, not Mason.
+        -- It gets enabled separately below after the Mason setup loop.
         --
         -- Some languages (like typescript) have entire language plugins that can be useful:
         --    https://github.com/pmizio/typescript-tools.nvim
@@ -614,9 +627,8 @@ require('lazy').setup({
       -- You can press `g?` for help in this menu.
       local ensure_installed = vim.tbl_keys(servers or {})
       vim.list_extend(ensure_installed, {
-        'lua_ls', -- Lua Language server
-        'stylua', -- Used to format Lua code
-        -- You can add other tools here that you want Mason to install
+        'lua-language-server',
+        'stylua',
       })
 
       require('mason-tool-installer').setup { ensure_installed = ensure_installed }
@@ -626,6 +638,10 @@ require('lazy').setup({
         vim.lsp.config(name, server)
         vim.lsp.enable(name)
       end
+
+      -- rust-analyzer is installed via rustup, not Mason, so we enable it here directly.
+      vim.lsp.config('rust_analyzer', { capabilities = capabilities })
+      vim.lsp.enable 'rust_analyzer'
 
       -- Special Lua Config, as recommended by neovim help docs
       vim.lsp.config('lua_ls', {
@@ -686,6 +702,7 @@ require('lazy').setup({
       end,
       formatters_by_ft = {
         lua = { 'stylua' },
+        rust = { 'rustfmt' },
         -- Conform can also run multiple formatters sequentially
         -- python = { "isort", "black" },
         --
@@ -785,6 +802,11 @@ require('lazy').setup({
 
       -- Shows a signature help window while you type arguments for a function
       signature = { enabled = true },
+
+      -- Enabled by default; toggled off by <leader>tc via vim.g.blink_cmp_enabled
+      enabled = function()
+        return vim.g.blink_cmp_enabled ~= false
+      end,
     },
   },
 
@@ -793,22 +815,26 @@ require('lazy').setup({
     -- change the command in the config to whatever the name of that colorscheme is.
     --
     -- If you want to see what colorschemes are already installed, you can use `:Telescope colorscheme`.
-    'folke/tokyonight.nvim',
+    'Mofiqul/vscode.nvim',
     priority = 1000, -- Make sure to load this before all the other start plugins.
     config = function()
-      ---@diagnostic disable-next-line: missing-fields
-      require('tokyonight').setup {
-        styles = {
-          comments = { italic = false }, -- Disable italics in comments
-        },
+      require('vscode').setup {
+        style = 'dark',
+        italic_comments = false,
       }
 
       -- Load the colorscheme here.
-      -- Like many other themes, this one has different styles, and you could load
-      -- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
-      vim.cmd.colorscheme 'tokyonight-night'
+      -- Other variants: use style = 'light' above for VSCode Light
+      vim.cmd.colorscheme 'vscode'
     end,
   },
+
+  -- GitHub Dark theme (commented out, swap with vscode.nvim block above to use)
+  -- { 'projekt0n/github-nvim-theme', priority = 1000, config = function()
+  --   require('github-theme').setup { options = { styles = { comments = 'NONE' } } }
+  --   -- Other variants: 'github_dark', 'github_dark_dimmed', 'github_dark_high_contrast'
+  --   vim.cmd.colorscheme 'github_dark_default'
+  -- end },
 
   -- Highlight todo, notes, etc in comments
   { 'folke/todo-comments.nvim', event = 'VimEnter', dependencies = { 'nvim-lua/plenary.nvim' }, opts = { signs = false } },
@@ -852,7 +878,7 @@ require('lazy').setup({
   { -- Highlight, edit, and navigate code
     'nvim-treesitter/nvim-treesitter',
     config = function()
-      local filetypes = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' }
+      local filetypes = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'rust', 'vim', 'vimdoc', 'vhdl' }
       require('nvim-treesitter').install(filetypes)
       vim.api.nvim_create_autocmd('FileType', {
         pattern = filetypes,
@@ -873,8 +899,8 @@ require('lazy').setup({
   -- require 'kickstart.plugins.debug',
   -- require 'kickstart.plugins.indent_line',
   -- require 'kickstart.plugins.lint',
-  -- require 'kickstart.plugins.autopairs',
-  -- require 'kickstart.plugins.neo-tree',
+  require 'kickstart.plugins.autopairs',
+  require 'kickstart.plugins.neo-tree',
   -- require 'kickstart.plugins.gitsigns', -- adds gitsigns recommend keymaps
 
   -- NOTE: The import below can automatically add your own plugins, configuration, etc from `lua/custom/plugins/*.lua`
@@ -911,3 +937,9 @@ require('lazy').setup({
 
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
+
+-- VHDL LSP.
+local lspconfig = require 'lspconfig'
+if vim.fn.executable 'vhdl_ls' == 1 then
+  lspconfig.vhdl_ls.setup {}
+end
