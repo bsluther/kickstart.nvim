@@ -629,6 +629,7 @@ require('lazy').setup({
       vim.list_extend(ensure_installed, {
         'lua-language-server',
         'stylua',
+        'typescript-language-server',
       })
 
       require('mason-tool-installer').setup { ensure_installed = ensure_installed }
@@ -642,6 +643,10 @@ require('lazy').setup({
       -- rust-analyzer is installed via rustup, not Mason, so we enable it here directly.
       vim.lsp.config('rust_analyzer', { capabilities = capabilities })
       vim.lsp.enable 'rust_analyzer'
+
+      -- TypeScript/JavaScript LSP (installed via Mason as 'typescript-language-server').
+      vim.lsp.config('ts_ls', { capabilities = capabilities })
+      vim.lsp.enable 'ts_ls'
 
       -- Special Lua Config, as recommended by neovim help docs
       vim.lsp.config('lua_ls', {
@@ -878,7 +883,7 @@ require('lazy').setup({
   { -- Highlight, edit, and navigate code
     'nvim-treesitter/nvim-treesitter',
     config = function()
-      local filetypes = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'rust', 'vim', 'vimdoc', 'vhdl' }
+      local filetypes = { 'bash', 'c', 'diff', 'html', 'javascript', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'rust', 'tsx', 'typescript', 'vim', 'vimdoc', 'vhdl' }
       require('nvim-treesitter').install(filetypes)
       vim.api.nvim_create_autocmd('FileType', {
         pattern = filetypes,
